@@ -17,6 +17,12 @@ from bbo.initial_parametrizations import (
     hybrid_lhs_uniform_sampling,
 )
 
+from bbo.smart_initialization import model
+
+from bbo.smart_initialization.initialisation_plan import (
+    initialize_optimizer_from_model
+)
+
 
 class TestUniformRandomDraws(unittest.TestCase):
     """
@@ -139,6 +145,42 @@ class TestUniformRandomDraws(unittest.TestCase):
         lhs = latin_hypercube_sampling(4, parameter_space)
         ur = uniform_random_draw(4, parameter_space)
         assert_array_equal(actual_result, np.append(lhs, ur, axis=0))
+
+    def test_smart_init_load_model(self):
+        """Test to check that the model for smart lhs
+        is correctly loaded;
+        """
+        self.assertIsNotNone(model)
+
+    def test_smart_init_predict(self):
+        """Test that the prediction of the model
+        of smart lhs is correct
+        """
+        fakeapp_test = [18874368, 286, 0]
+        expected = [2.0000000e+00, 1.1272192e+07, 3.9321600e+06, 2.1000000e+02]
+        res = list(model.predict([fakeapp_test])[0])
+        self.assertEqual(res, expected)
+
+    def test_smart_init_space(self):
+        """Test that the initial points are
+        properly generated using smart lhs
+        """
+        np.random.seed(10)
+        fakeapp_test = [18874368, 286, 0]
+        parameter_space = np.array([np.arange(2, 102, 20), np.arange(262144, 1048576*20, 1048576), np.arange(1048576, 10485760, 1048576), np.arange(50, 750, 100)])
+        result = initialize_optimizer_from_model(4, parameter_space, model, fakeapp_test)
+        expected = [[2.0, 11272192.0, 3932160.0, 210.0], [42, 6553600, 2097152, 50], [82, 18087936, 5242880, 650], [22, 262144, 9437184, 350]]
+        self.assertEqual(result, expected)
+
+    def test_smart_init_not_in_space(self):
+        """Test that the initialization raises an error
+        if the predicted point is not in the space.
+        """
+        fakeapp_test = [18874368, 286, 0]
+        parameter_space = np.array([np.arange(2, 102, 20), np.arange(262144, 1048576, 1048576), np.arange(1048576, 10485760, 1048576), np.arange(50, 750, 100)])
+        with self.assertRaises(ValueError) as context:
+            initialize_optimizer_from_model(4, parameter_space, model, fakeapp_test)
+            self.assertTrue("Point not in space on dimension 1" in str(context.exception))
 
 
 if __name__ == "__main__":

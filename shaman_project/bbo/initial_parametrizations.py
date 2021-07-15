@@ -16,7 +16,8 @@ import numpy as np
 from loguru import logger
 
 
-def uniform_random_draw(number_of_parameters, parameter_space):
+def uniform_random_draw(number_of_parameters, parameter_space,
+                        *args, **kwargs):
     """Draws randomly number_of_parameters among the parameter_space.
 
     Args:
@@ -39,7 +40,8 @@ def uniform_random_draw(number_of_parameters, parameter_space):
     return np.array(random_draw).T
 
 
-def latin_hypercube_sampling(number_of_parameters, parameter_space):
+def latin_hypercube_sampling(number_of_parameters, parameter_space,
+                             *args, **kwargs):
     """Given a parameter space and a number of parameters to draw, draws
     number_of_parameters parameter that respect the Latin Hypercube Sampling
     rule (no parameter have the same dimension on any axis).
@@ -90,7 +92,8 @@ def latin_hypercube_sampling(number_of_parameters, parameter_space):
         return random_draw
 
 
-def hybrid_lhs_uniform_sampling(number_of_parameters, parameter_space):
+def hybrid_lhs_uniform_sampling(number_of_parameters, parameter_space,
+                                *args, **kwargs):
     """Draws number_of_parameters parameter that respect the Latin Hypercube
     Sampling rule while the number of parameter does not exceed the number
     value in the smallest sample. Beyond, a uniform random sampling is applied.

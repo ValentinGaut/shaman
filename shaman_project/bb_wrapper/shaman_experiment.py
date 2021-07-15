@@ -131,6 +131,66 @@ class SHAManExperiment:
         self.experiment_start = \
             datetime.datetime.utcnow().strftime("%y/%m/%d %H:%M:%S")
 
+    @staticmethod
+    def get_value_from_string(string):
+        values_dict = dict()
+        lines = string.split("\n")
+        for line in lines:
+            if len(line) > 0 and line[0] != "#":
+                split_string = line.split("-")[1:]
+                for splits in split_string:
+                    values = splits.split(" ")
+                    if not values[1]:
+                        values[1] = 1
+                    if values[0] in ["srun", "nompi"]:
+                        continue
+                    values_dict[values[0]] = values[1]
+        return values_dict
+
+    @staticmethod
+    def rename_dict(dict_, renaming_dict):
+        """
+        Given a dict, rename the keys with these in the renaming_dict
+        dictionary.
+        """
+        new_dict = dict()
+        for key, value in dict_.items():
+            new_dict[renaming_dict[key]] = value
+        return new_dict
+
+    @staticmethod
+    def str_to_int(x):
+        if isinstance(x, str):
+            try:
+                if x == "0":
+                    value = 0
+                    exponent = 1
+                else:
+                    value = int(x[:-1])
+                    exponent = x[-1]
+                if exponent == "k":
+                    return value*1024
+                elif exponent == "M":
+                    return value*1024**2
+                elif exponent == "G":
+                    return value*1024**3
+                else:
+                    return int(x)
+            except ValueError:
+                return x
+        else:
+            return x
+
+    @staticmethod
+    def clean_input(input_data):
+        """
+        Clean the input dataframe.
+        """
+        for column in range(len(input_data)):
+            input_data[column] = SHAManExperiment.str_to_int(
+                input_data[column])
+        return input_data
+
     def setup_bb_optimizer(self) -> BBOptimizer:
         """Setups the black-box from the configuration."""
         # Create the BBOptimizer object using the different options in the
@@ -147,12 +207,41 @@ class SHAManExperiment:
             max_step_cost = None
             pruning = False
 
+        shortcut_name = {"R": "reading",
+                         "d": "file",
+                         "N": "nbr_ops",
+                         "w": "smallest_op",
+                         "W": "biggest_op",
+                         "S": "scatter",
+                         "L": "leads",
+                         "l": "lead_advance",
+                         "Z": "file_size",
+                         "r": "repeats",
+                         "s": "seed"}
+
+        path_to_sbatch = Path(self.sbatch_file)
+        with open(path_to_sbatch) as f:
+            sbatch_data = f.read()
+            data = SHAManExperiment.rename_dict(
+                SHAManExperiment.get_value_from_string(sbatch_data),
+                shortcut_name)
+
+        if (("scatter" in data) and
+                ("leads" in data) and
+                ("lead_advance" in data)):
+            self.fakeapp_parameters = SHAManExperiment.clean_input(
+                [data["scatter"], data["leads"],
+                 data["lead_advance"]])
+        else:
+            self.fakeapp_parameters = None
+
         self.bb_optimizer = BBOptimizer(
             black_box=self.bb_wrapper,
             parameter_space=self.configuration.component_parameter_space,
             max_iteration=self.nbr_iteration,
             async_optim=pruning,
             max_step_cost=max_step_cost,
+            fakeapp_parameters=self.fakeapp_parameters,
             **self.configuration.bbo_parameters,
         )
         return self.bb_optimizer

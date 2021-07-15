@@ -26,6 +26,9 @@ from bbo.heuristics.simulated_annealing.simulated_annealing import \
     SimulatedAnnealing
 from bbo.heuristics.genetic_algorithm.genetic_algorithm import GeneticAlgorithm
 from bbo.heuristics.exhaustive_search.exhaustive_search import ExhaustiveSearch
+from bbo.smart_initialization import model
+from bbo.smart_initialization.initialisation_plan import (
+    initialize_optimizer_from_model)
 from bbo.initial_parametrizations import (
     uniform_random_draw,
     latin_hypercube_sampling,
@@ -66,6 +69,7 @@ class BBOptimizer:
         "uniform_random": uniform_random_draw,
         "latin_hypercube_sampling": latin_hypercube_sampling,
         "hybrid_lhs_uniform_sampling": hybrid_lhs_uniform_sampling,
+        "smart_lhs": initialize_optimizer_from_model
     }
 
     # Dictionary of the different methods that can be used as stop
@@ -107,6 +111,8 @@ class BBOptimizer:
         max_step_cost=None,
         resampling_policy=None,
         fitness_aggregation=None,
+        fakeapp_parameters=None,
+        model=model,
         **kwargs,
     ):
         """Initialization of the BBOptimizer class which performs black-box
@@ -332,6 +338,15 @@ class BBOptimizer:
         self.best_parameters_in_grid = None
         # Optimum fitness found
         self.best_fitness = None
+        if initial_draw_method == "smart_lhs":
+            if not fakeapp_parameters:
+                raise TypeError("fakeapp_parameters cannot be None when \
+                    using smart_lhs initilization")
+            if not model:
+                raise TypeError("model cannot be None when \
+                    using smart_lhs initilization")
+        self.fakeapp_parameters = fakeapp_parameters
+        self.model = model
 
     def _append_parameters(self, new_parameters):
         """Appends new parameters to the history of previously selected
@@ -525,14 +540,17 @@ class BBOptimizer:
         # store the value as non truncated
         self._append_truncated(False)
 
-    def _initialize(self, callbacks=[lambda x: x]):
+    def _initialize(self,
+                    callbacks=[lambda x: x]):
         """Initalizes the black-box algorithm using the selected strategy and
         the number of initial data points."""
         logger.debug("Initializing parameter space")
         # Draw parameters according to the initialization method and compute
         # fitness value
         initial_parameters = self.initial_selection(
-            self.initial_sample_size, self.parameter_space
+            self.initial_sample_size, self.parameter_space,
+            self.model,
+            self.fakeapp_parameters
         )
         logger.debug(f"Selected initial parameter space: {initial_parameters}")
         step = 0

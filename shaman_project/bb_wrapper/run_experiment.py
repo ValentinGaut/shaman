@@ -72,12 +72,12 @@ def run(
             "interrupt."
         )
         experiment.stop()
-    except Exception as e:
-        logger.critical(
-            "Encountered exception while launching experiment"
-            f"{experiment_name}: {e}"
-        )
-        experiment.fail()
+    #except Exception as e:
+    #    logger.critical(
+    #        "Encountered exception while launching experiment"
+    #        f"{experiment_name}: {e}"
+    #    )
+    #    experiment.fail()
 
 
 cli.command()(run)

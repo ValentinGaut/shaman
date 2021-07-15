@@ -48,6 +48,20 @@ class Parabola:
         return array_2d[0] ** 2 + array_2d[1] ** 2
 
 
+class FakePredictor:
+    """
+    Fake predictor for smart_lhs
+    """
+    def __init__(self):
+        print("I am a fake predictor, I am dum dum")
+
+    def predict(self, parameters):
+        """Simple prediction function that only returns
+        one result.
+        """
+        return [[1, 1, 1]]
+
+
 # Create mock class that does not have a compute method for testing purpose
 class AintGotNoCompute:
     """
@@ -115,6 +129,7 @@ class TestOptimizer(unittest.TestCase):
         """
         self.parabola = Parabola()
         self.no_compute = AintGotNoCompute()
+        self.predictor = FakePredictor()
 
     def test_no_compute_method(self):
         """
@@ -1044,6 +1059,51 @@ class TestOptimizer(unittest.TestCase):
         )
         bb_obj.optimize()
         self.assertTrue(len(bb_obj.history["fitness"]) < 51)
+
+    def test_init_with_smart_lhs(self):
+        """Test that the Optimizer is correctly instanciated
+        with smart_lhs
+        """
+        nbr_iteration = 5
+        bb_obj = BBOptimizer(
+            black_box=self.parabola,
+            heuristic="genetic_algorithm",
+            max_iteration=nbr_iteration,
+            initial_sample_size=2,
+            parameter_space=parameter_space,
+            selection_method=tournament_pick,
+            crossover_method=double_point_crossover,
+            mutation_method=mutate_chromosome_to_neighbor,
+            mutation_rate=0.6,
+            reevaluate=False,
+            max_retry=5,
+            initial_draw_method="smart_lhs",
+            fakeapp_parameters=[18874368, 286, 0],
+            model=self.predictor
+        )
+        bb_obj.optimize()
+
+    def test_smart_lhs_missing_parameters(self):
+        """Test that the bbo object raises a TypeError
+        when using smart_lhs without giving its parameters
+        """
+        nbr_iteration = 5
+        with self.assertRaises(TypeError):
+            BBOptimizer(
+                black_box=self.parabola,
+                heuristic="genetic_algorithm",
+                max_iteration=nbr_iteration,
+                initial_sample_size=2,
+                parameter_space=parameter_space,
+                selection_method=tournament_pick,
+                crossover_method=double_point_crossover,
+                mutation_method=mutate_chromosome_to_neighbor,
+                mutation_rate=0.6,
+                reevaluate=False,
+                max_retry=5,
+                initial_draw_method="smart_lhs",
+                model=self.predictor
+            )
 
 
 if __name__ == "__main__":

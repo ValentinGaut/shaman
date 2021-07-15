@@ -26,6 +26,7 @@ CONFIG_ASYNC_DEFAULT = Path(__file__).parent / \
 CONFIG_ASYNC = Path(__file__).parent / "test_config" / "pruning.yaml"
 CONFIG_NOISE = Path(__file__).parent / "test_config" / "noise_reduction.yaml"
 SBATCH = Path(__file__).parent / "test_sbatch" / "test_sbatch.sbatch"
+SBATCH_FAKEAPP = Path(__file__).parent / "test_sbatch" / "test_sbatch_fakeapp.sbatch"
 TEST_SLURMS = Path(__file__).parent / "test_slurm_outputs"
 SLURM_DIR = Path(__file__).resolve().parent / "slurm_save"
 SBATCH_DIR = Path(__file__).resolve().parent / "sbatch_save"
@@ -224,6 +225,60 @@ class TestSHAManExperiment(unittest.TestCase):
             sbatch_dir=SBATCH_DIR,
             slurm_dir=SLURM_DIR,
         )
+        self.assertEqual(se.component_name, "component_1")
+        self.assertEqual(se.nbr_iteration, 3)
+        self.assertEqual(se.sbatch_file, SBATCH)
+        self.assertEqual(se.experiment_name, "test_experiment")
+        self.assertEqual(se.sbatch_dir, SBATCH_DIR)
+        self.assertEqual(se.slurm_dir, SLURM_DIR)
+        self.assertEqual(se.result_file, None)
+        self.assertIsInstance(
+            datetime.strptime(
+                se.experiment_start, "%y/%m/%d %H:%M:%S"), datetime
+        )
+        self.assertIsInstance(se.bb_wrapper, BBWrapper)
+        self.assertIsInstance(se.bb_optimizer, BBOptimizer)
+
+    @patch("httpx.get", side_effect=mocked_requests_get)
+    def test_init_fakeapp(self, mocked_get):
+        """ Test the attribute of the class 'SHAManExperiment' are properly set. """
+        se = SHAManExperiment(
+            component_name="component_1",
+            nbr_iteration=3,
+            sbatch_file=SBATCH_FAKEAPP,
+            experiment_name="test_experiment",
+            configuration_file=CONFIG,
+            sbatch_dir=SBATCH_DIR,
+            slurm_dir=SLURM_DIR,
+        )
+        self.assertEqual(se.fakeapp_parameters, [14680064, 307, 0])
+        self.assertEqual(se.component_name, "component_1")
+        self.assertEqual(se.nbr_iteration, 3)
+        self.assertEqual(se.sbatch_file, SBATCH_FAKEAPP)
+        self.assertEqual(se.experiment_name, "test_experiment")
+        self.assertEqual(se.sbatch_dir, SBATCH_DIR)
+        self.assertEqual(se.slurm_dir, SLURM_DIR)
+        self.assertEqual(se.result_file, None)
+        self.assertIsInstance(
+            datetime.strptime(
+                se.experiment_start, "%y/%m/%d %H:%M:%S"), datetime
+        )
+        self.assertIsInstance(se.bb_wrapper, BBWrapper)
+        self.assertIsInstance(se.bb_optimizer, BBOptimizer)
+
+    @patch("httpx.get", side_effect=mocked_requests_get)
+    def test_init_no_fakeapp(self, mocked_get):
+        """ Test the attribute of the class 'SHAManExperiment' are properly set. """
+        se = SHAManExperiment(
+            component_name="component_1",
+            nbr_iteration=3,
+            sbatch_file=SBATCH,
+            experiment_name="test_experiment",
+            configuration_file=CONFIG,
+            sbatch_dir=SBATCH_DIR,
+            slurm_dir=SLURM_DIR,
+        )
+        self.assertIsNone(se.fakeapp_parameters)
         self.assertEqual(se.component_name, "component_1")
         self.assertEqual(se.nbr_iteration, 3)
         self.assertEqual(se.sbatch_file, SBATCH)
