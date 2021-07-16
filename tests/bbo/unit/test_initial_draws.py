@@ -10,6 +10,10 @@ Tests that the initial parametrizations methods work properly.
 import unittest
 import numpy as np
 from numpy.testing import assert_array_equal
+import pandas as pd
+from pathlib import Path
+
+from . import clean_input
 
 from bbo.initial_parametrizations import (
     uniform_random_draw,
@@ -17,11 +21,11 @@ from bbo.initial_parametrizations import (
     hybrid_lhs_uniform_sampling,
 )
 
-from bbo.smart_initialization import model
-
 from bbo.smart_initialization.initialisation_plan import (
     initialize_optimizer_from_model
 )
+
+from bbo.smart_initialization.data_matcher import DataMatcher
 
 
 class TestUniformRandomDraws(unittest.TestCase):
@@ -34,6 +38,17 @@ class TestUniformRandomDraws(unittest.TestCase):
         Sets up the testing procedure by setting the random seed of the project.
         """
         np.random.seed(2)
+        CURRENT_DIR = Path(__file__).parent.resolve()
+        DATA_PATH = CURRENT_DIR / "data" / "test_data.csv"
+        df = pd.read_csv(DATA_PATH)
+        df = clean_input(df)
+        fakeapp_array = df[["scatter", "leads", "lead_advance"]].values
+        sro_array = df[["SRO_CLUSTER_THRESHOLD", "SRO_DSC_BINSIZE", "SRO_PREFETCH_SIZE", "SRO_SEQUENCE_LENGTH"]].values
+
+        matcher = DataMatcher()
+        matcher.fit(fakeapp_array, sro_array)
+
+        self.model = matcher
 
     def test_uniform_random_draw_array(self):
         """
@@ -150,7 +165,7 @@ class TestUniformRandomDraws(unittest.TestCase):
         """Test to check that the model for smart lhs
         is correctly loaded;
         """
-        self.assertIsNotNone(model)
+        self.assertIsNotNone(self.model)
 
     def test_smart_init_predict(self):
         """Test that the prediction of the model
@@ -158,7 +173,7 @@ class TestUniformRandomDraws(unittest.TestCase):
         """
         fakeapp_test = [18874368, 286, 0]
         expected = [2.0000000e+00, 1.1272192e+07, 3.9321600e+06, 2.1000000e+02]
-        res = list(model.predict([fakeapp_test])[0])
+        res = list(self.model.predict([fakeapp_test])[0])
         self.assertEqual(res, expected)
 
     def test_smart_init_space(self):
@@ -168,7 +183,7 @@ class TestUniformRandomDraws(unittest.TestCase):
         np.random.seed(10)
         fakeapp_test = [18874368, 286, 0]
         parameter_space = np.array([np.arange(2, 102, 20), np.arange(262144, 1048576*20, 1048576), np.arange(1048576, 10485760, 1048576), np.arange(50, 750, 100)])
-        result = initialize_optimizer_from_model(4, parameter_space, model, fakeapp_test)
+        result = initialize_optimizer_from_model(4, parameter_space, self.model, fakeapp_test)
         expected = [[2.0, 11272192.0, 3932160.0, 210.0], [42, 6553600, 2097152, 50], [82, 18087936, 5242880, 650], [22, 262144, 9437184, 350]]
         self.assertEqual(result.tolist(), expected)
 
@@ -179,7 +194,7 @@ class TestUniformRandomDraws(unittest.TestCase):
         fakeapp_test = [18874368, 286, 0]
         parameter_space = np.array([np.arange(2, 102, 20), np.arange(262144, 1048576, 1048576), np.arange(1048576, 10485760, 1048576), np.arange(50, 750, 100)])
         with self.assertRaises(ValueError) as context:
-            initialize_optimizer_from_model(4, parameter_space, model, fakeapp_test)
+            initialize_optimizer_from_model(4, parameter_space, self.model, fakeapp_test)
             self.assertTrue("Point not in space on dimension 1" in str(context.exception))
 
 
