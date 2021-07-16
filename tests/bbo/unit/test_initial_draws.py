@@ -170,7 +170,7 @@ class TestUniformRandomDraws(unittest.TestCase):
         parameter_space = np.array([np.arange(2, 102, 20), np.arange(262144, 1048576*20, 1048576), np.arange(1048576, 10485760, 1048576), np.arange(50, 750, 100)])
         result = initialize_optimizer_from_model(4, parameter_space, model, fakeapp_test)
         expected = [[2.0, 11272192.0, 3932160.0, 210.0], [42, 6553600, 2097152, 50], [82, 18087936, 5242880, 650], [22, 262144, 9437184, 350]]
-        self.assertEqual(result, expected)
+        self.assertEqual(result.tolist(), expected)
 
     def test_smart_init_not_in_space(self):
         """Test that the initialization raises an error
